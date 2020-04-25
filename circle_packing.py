@@ -12,15 +12,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--radius', default=0.5, type=float, help="pick the radius for the circles.")
 parser.add_argument('--bin_size', default=4, type=float, help="pick the bin size.")
 parser.add_argument('--num_circles', default=100, type=int, help="pick number of circles.")
+parser.add_argument('--no_visual', default=False, action="store_true", help="turn off visualization")
 
 class CirclePacker(object):
-    """A class to pack circles. """
-    def __init__(self):
-        self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111)
-        self.circles = {}
+    """A class to implement approximate circle packing with visualization."""
+    def __init__(self, visualize=True):
+        self.visualize = visualize
+        if self.visualize:
+            self.fig = plt.figure()
+            self.ax = self.fig.add_subplot(111)
+            self.circles = {}
 
     def draw_colored_circles(self, circle_centers, radius, color="none"):
+        """ Draws circles at circle_centers with the provided radius and filled with color."""
         for center in circle_centers:
             center = tuple(center)
             if center in self.circles:
@@ -34,6 +38,18 @@ class CirclePacker(object):
             self.fig.canvas.draw()
 
     def draw_grid(self, grid_x_start, grid_y_start, grid_size, horizontal_length, vertical_length):
+        """ Draws a grid on the plot.
+        
+        Args:
+            grid_x_start (float): The starting x coordinate of horizontal lines.
+            grid_y_start (float): The starting y coordinate of vertical lines.
+            grid_size (float): The width / height of one grid cell.
+            horizonal_length (float): the length of each horizontal line.
+            vertical_length (float): the length of each vertical line.
+            
+        Returns:
+            None
+        """
         y_locations = np.arange(grid_y_start, grid_y_start + vertical_length + 1, grid_size)
         lines_h = self.ax.hlines(y_locations, grid_x_start, grid_x_start + horizontal_length)
 
@@ -43,13 +59,13 @@ class CirclePacker(object):
         self.fig.canvas.draw()
 
     def is_valid(self, centers, radius):
+        """Checks whether a set of circle centers is disjoint."""
         # compare every circle to the others
         for i, center in enumerate(centers[:-1]):
             for j, other_center in enumerate(centers[i+1:]):
                 if np.linalg.norm(center - other_center) < 2 * radius:
                     return False
         return True
-                
 
     def approx_pack_circles(self, circle_centers, grid_size, radius):
         """ Solves the appoximate circle packing problem. 
@@ -79,13 +95,15 @@ class CirclePacker(object):
         bins_per_row = int(np.ceil((max_x - grid_x_start) / grid_size))
         bins_per_col = int(np.ceil((max_y - grid_y_start) / grid_size))
 
-        plt_size = max(bins_per_row * grid_size, bins_per_col * grid_size)
-        plt.xlim(grid_x_start, grid_x_start + plt_size)
-        plt.ylim(grid_y_start, grid_y_start + plt_size)
-        
-        self.draw_colored_circles(circle_centers, radius)
-        time.sleep(3)
-        self.draw_grid(grid_x_start, grid_y_start, grid_size, bins_per_row * grid_size, bins_per_col * grid_size)
+        # Set plt size to fit all circles in
+        if self.visualize:
+            plt_size = max(bins_per_row * grid_size, bins_per_col * grid_size)
+            plt.xlim(grid_x_start, grid_x_start + plt_size)
+            plt.ylim(grid_y_start, grid_y_start + plt_size)
+            
+            self.draw_colored_circles(circle_centers, radius)
+            time.sleep(3)
+            self.draw_grid(grid_x_start, grid_y_start, grid_size, bins_per_row * grid_size, bins_per_col * grid_size)
 
         max_circles_per_grid = int(np.floor((grid_size / radius)**2))
 
@@ -98,7 +116,8 @@ class CirclePacker(object):
             left_grid_line_dist = from_grid_x_start % grid_size
             right_grid_line_dist = grid_size - left_grid_line_dist
             if left_grid_line_dist < radius or right_grid_line_dist < radius:
-                self.draw_colored_circles([center], radius, "red")
+                if self.visualize:
+                    self.draw_colored_circles([center], radius, "red")
                 continue
             
             # Along y
@@ -106,7 +125,8 @@ class CirclePacker(object):
             bottom_grid_line_dist = from_grid_y_start % grid_size
             top_grid_line_dist = grid_size - bottom_grid_line_dist
             if bottom_grid_line_dist < radius or top_grid_line_dist < radius:
-                self.draw_colored_circles([center], radius, "red")
+                if self.visualize:
+                    self.draw_colored_circles([center], radius, "red")
                 continue
 
             # If not, assign a bin #
@@ -115,7 +135,6 @@ class CirclePacker(object):
             bin_num = top_grid_line_idx * bins_per_row + left_grid_line_idx
             circle_bins[bin_num].append(idx)
         
-        time.sleep(3)
         kept_circles = set()
         # For each bin, enumerate all possible circle combinations and pick the one that is best
         for _, center_idx in circle_bins.items():
@@ -125,8 +144,9 @@ class CirclePacker(object):
                 for combo_center_idx in all_len_combos:
                     if self.is_valid(circle_centers[np.array(combo_center_idx)], radius):
                         kept_circles.update(combo_center_idx)
-                        self.draw_colored_circles(circle_centers[np.array(combo_center_idx)], radius, "blue")
-                        time.sleep(0.2)
+                        if self.visualize:
+                            self.draw_colored_circles(circle_centers[np.array(combo_center_idx)], radius, "blue")
+                            time.sleep(0.2)
                         set_found = True
                         break
                 if set_found:
@@ -139,7 +159,7 @@ if __name__ == "__main__":
     plt.ion()
     args = parser.parse_args()
     circle_centers = np.random.rand(args.num_circles, 2) * 20
-    packer = CirclePacker()
+    packer = CirclePacker(visualize=(not args.no_visual))
     packer.approx_pack_circles(circle_centers, args.bin_size, args.radius)
 
     
