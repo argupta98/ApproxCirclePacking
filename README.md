@@ -21,13 +21,13 @@ optional arguments:
 To run with default settings you can directly run:
 
 ```bash
-$ python circle_packing.py --help
+$ python circle_packing.py
 ```
 
 The expected output is a random simulation with 100 randomly selected points as described by the default parameters.
 ![simulation demo](demo/demo.gif)
 
-The visualization follows the approximate circle packing algorithm by randomly overlaying a grid over the circles, removing circles that are cut by a grid line (marked in red), and then solving the approximate circle pattern separately for each grid cell.
+The visualization follows the approximate circle packing algorithm by randomly overlaying a grid over the circles, removing circles that are cut by a grid line (marked in red), and then solving the approximate circle pattern separately for each grid cell. The selected circles are filled in with blue. The program outputs the number of packed circles on command line at the end.
 
 # License
 
